@@ -1,10 +1,12 @@
 {
-  "name": "projetoescritorio",
+  "name": "edauro",
   "version": "1.0.0",
-  "description": "",
+  "description": "EDAURO — mural de projetos, inscrições e certificados",
   "main": "app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node app.js",
+    "dev": "node --watch app.js",
+    "test": "node scripts/smoke-test.js"
   },
   "keywords": [],
   "author": "",

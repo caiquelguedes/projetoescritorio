@@ -1,122 +1,142 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useCallback, useEffect, useState } from 'react'
+import { api, definirToken } from './api'
+import Login from './components/Login.jsx'
+import Layout from './components/Layout.jsx'
+import Mural from './components/Mural.jsx'
+import MinhasInscricoes from './components/MinhasInscricoes.jsx'
+import MeusProjetos from './components/MeusProjetos.jsx'
+import PainelCAEX from './components/PainelCAEX.jsx'
+import Toast from './components/Toast.jsx'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+const ABAS = {
+  discente: [
+    { id: 'mural', label: 'Mural de projetos' },
+    { id: 'inscricoes', label: 'Minhas inscrições' },
+  ],
+  docente: [{ id: 'meus-projetos', label: 'Meus projetos' }],
+  servidor: [{ id: 'meus-projetos', label: 'Meus projetos' }],
+  caex: [
+    { id: 'solicitacoes', label: 'Solicitações' },
+    { id: 'notificacoes', label: 'Notificações' },
+    { id: 'novo-projeto', label: 'Novo projeto' },
+    { id: 'auditoria', label: 'E-mails enviados' },
+  ],
+  administrador: [
+    { id: 'solicitacoes', label: 'Solicitações' },
+    { id: 'notificacoes', label: 'Notificações' },
+    { id: 'novo-projeto', label: 'Novo projeto' },
+    { id: 'auditoria', label: 'E-mails enviados' },
+  ],
+}
+
+function abaInicial(perfil) {
+  return ABAS[perfil]?.[0]?.id ?? 'mural'
+}
+
+function usuarioSalvo() {
+  try {
+    return JSON.parse(localStorage.getItem('edauro:usuario') ?? 'null')
+  } catch {
+    return null
+  }
+}
+
+export default function App() {
+  const [usuario, setUsuario] = useState(usuarioSalvo)
+  const [usuarios, setUsuarios] = useState([])
+  const [erroLogin, setErroLogin] = useState('')
+  const [conectando, setConectando] = useState(false)
+  const [aba, setAba] = useState(() => abaInicial(usuarioSalvo()?.perfil))
+  const [versao, setVersao] = useState(0)
+  const [toast, setToast] = useState(null)
+
+  const avisar = useCallback((mensagem, tipo = 'sucesso') => {
+    setToast({ mensagem, tipo })
+  }, [])
+
+  const onChange = useCallback(() => {
+    setVersao((anterior) => anterior + 1)
+  }, [])
+
+  useEffect(() => {
+    api.usuariosDemo().then(setUsuarios).catch(() => setUsuarios([]))
+  }, [])
+
+  useEffect(() => {
+    if (!toast) return undefined
+    const temporizador = setTimeout(() => setToast(null), 5000)
+    return () => clearTimeout(temporizador)
+  }, [toast])
+
+  async function entrar(credencial) {
+    setConectando(true)
+    setErroLogin('')
+    try {
+      const dados = await api.login(credencial)
+      definirToken(dados.token)
+      localStorage.setItem('edauro:usuario', JSON.stringify(dados.usuario))
+      setUsuario(dados.usuario)
+      setAba(abaInicial(dados.usuario.perfil))
+      setVersao((anterior) => anterior + 1)
+    } catch (falha) {
+      setErroLogin(falha.message)
+    } finally {
+      setConectando(false)
+    }
+  }
+
+  function sair() {
+    definirToken(null)
+    localStorage.removeItem('edauro:usuario')
+    setUsuario(null)
+    setAba('mural')
+    setToast(null)
+  }
+
+  if (!usuario) {
+    return (
+      <>
+        <Login
+          usuarios={usuarios}
+          onLogin={entrar}
+          erro={erroLogin}
+          conectando={conectando}
+        />
+        <Toast toast={toast} onFechar={() => setToast(null)} />
+      </>
+    )
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+      <Layout
+        usuario={usuario}
+        abas={ABAS[usuario.perfil] ?? ABAS.discente}
+        abaAtiva={aba}
+        onTrocarAba={setAba}
+        onSair={sair}
+      >
+        {aba === 'mural' && (
+          <Mural versao={versao} onChange={onChange} avisar={avisar} />
+        )}
+        {aba === 'inscricoes' && (
+          <MinhasInscricoes versao={versao} onChange={onChange} avisar={avisar} />
+        )}
+        {aba === 'meus-projetos' && (
+          <MeusProjetos versao={versao} onChange={onChange} avisar={avisar} />
+        )}
+        {['solicitacoes', 'notificacoes', 'novo-projeto', 'auditoria'].includes(aba) && (
+          <PainelCAEX
+            aba={aba}
+            versao={versao}
+            onChange={onChange}
+            avisar={avisar}
+            usuarios={usuarios}
+          />
+        )}
+      </Layout>
+      <Toast toast={toast} onFechar={() => setToast(null)} />
     </>
   )
 }
-
-export default App
